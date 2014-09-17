@@ -3,7 +3,7 @@ public class PercolationStats {
     private int N;
     public PercolationStats(int N, int T) {
         if (N <= 0 || T <= 0)
-             throw new IllegalArgumentException("Nonnegative arguments");
+             throw new IllegalArgumentException();
         this.N = N;
         fractions = new double[T];
         for (int i = 0; i < T; i++) {
@@ -40,21 +40,5 @@ public class PercolationStats {
         return StdRandom.uniform(N) + 1;
     }
     public static void main(String[] args) {
-        int N = Integer.parseInt(args[0]);
-        int T = Integer.parseInt(args[1]);
-        PercolationStats stat = new PercolationStats(N, T);
-        double mean = stat.mean();
-        double std = stat.stddev();
-        double left = mean - 1.96 * std / Math.sqrt(T);
-        double right = mean + 1.96 * std / Math.sqrt(T);
-        int leftN = (int) (N * N * left);
-        int rightN = (int) (N * N * right);
-        StdOut.printf("%-23s = %f\n", "mean", mean);
-        StdOut.printf("%-23s = %f\n", "stddev", std);
-        StdOut.printf("%-23s = %f, %f\n", "95% confidence interval",
-                      left, right);
-        StdOut.printf("\nN: %d, T: %d\n", N, T);
-        StdOut.printf("Total: %d, open sites [%d, %d]\n",
-                      N*N, leftN, rightN);
     }
 }

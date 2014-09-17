@@ -3,7 +3,7 @@ public class ShellSort
     public static void sort(Comparable[] a)
     {
         int N = a.length;
-        int h = 4; 1
+        int h = 4; 
         while (h < N/3) h = 3*h + 1;
         while (h >= 1)
         {

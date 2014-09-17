@@ -1,25 +1,3 @@
-/****************************************************************************
- *  Compilation:  javac Percolation.java
- *  Execution:    java Percolation input.txt
- *  Dependencies: Percolation.java StdDraw.java In.java
- *
- *  This program takes the name of a file as a command-line argument.
- *  From that file, it
- *
- *    - Reads the grid size N of the percolation system.
- *    - Creates an N-by-N grid of sites (intially all blocked)
- *    - Reads in a sequence of sites (row i, column j) to open.
- *
- *  After each site is opened, it draws full sites in light blue,
- *  open sites (that aren't full) in white, and blocked sites in black,
- *  with with site (1, 1) in the upper left-hand corner.
- *
- ****************************************************************************/
-    Compilation:  javac PercolationVisualizer.java
- *  Execution:    java PercolationVisualizer input.txt
- *  Dependencies: Percolation.java StdDraw.java In.java
-
-
 public class Percolation {
     private final int N; // Length of one side of the grid.
     private boolean[] open;
@@ -31,7 +9,7 @@ public class Percolation {
     // create N-by-N grid, with all sites blocked
     public Percolation(int N) { 
         if (N >= 0xffff || N <= 0)
-            throw new IllegalArgumentException("Dimension must be < 2^16");
+            throw new IllegalArgumentException();
         this.N = N;
         open = new boolean[N*N];
         // Add two for the virtual top and bottom
@@ -81,15 +59,8 @@ public class Percolation {
             fullness.union(indexOf(i, j - 1), index);
         }
     }
-    /* Convert grid coordinates of the form (x, y) where x,y in {1,...,N}
-     to an array index. E.g., indexOf(1,1) == 0; indexOf(N, N) = N^2 - 1.
-     Assume the grid is in row-major form.
-     */
     private int indexOf(int row, int col) {
-        if (row <= 0 || row > N || col <= 0 || col > N)
-            throw new IndexOutOfBoundsException(
-                                                "(" + row + ", " + col + ") out of bounds "
-                                                    + "for " + N + "^2 grid.");
+        if (row <= 0 || row > N || col <= 0 || col > N) throw new IndexOutOfBoundsException();
         return (row - 1) * N + (col - 1);
     }
     public static void main(String[] argv) {
