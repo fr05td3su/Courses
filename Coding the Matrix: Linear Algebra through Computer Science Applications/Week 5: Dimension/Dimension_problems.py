@@ -3,13 +3,42 @@ coursera = 1
 # Please fill out this stencil and submit using the provided submission script.
 
 from vecutil import list2vec
-from GF2 import one
 from solver import solve
-from matutil import listlist2mat, coldict2mat
+from matutil import *
 from mat import Mat
+from GF2 import one
 from vec import Vec
+from independence import *
+from triangular import *
 
+# Some helper functions from hw4
+def is_superfluous(L, i):
+    assert (i in range(len(L)))
+    if len(L) == 1:
+        return False
+    copyMat = list(L)
+    bVec = copyMat.pop(i)   ## deepcopy
+    bMat = coldict2mat(copyMat)
+    sol = solve(bMat,bVec)
+    residual = bVec - bMat * sol
+    result = residual * residual
+    if result == one:
+        return False
+    return True if residual * residual < 1.0e-14 else False
 
+def exchange(S, A, z):
+    for i in range(len(S)):
+        w = S[i]
+        if w not in A:
+            tmpL = list(S)
+            tmpV = tmpL.pop(i)
+            tmpL.insert(i,z)
+            tmpMat = coldict2mat(tmpL)
+            sol = solve(tmpMat,tmpV)
+            residual = tmpV - tmpMat * sol
+            if residual * residual < 1.0e-14:
+                return w
+    return None
 
 ## 1: (Problem 6.7.2) Iterative Exchange Lemma
 w0 = list2vec([1,0,0])
@@ -24,10 +53,9 @@ v2 = list2vec([0,3,3])
 # with appropriate lists of 3 vectors
 
 exchange_S0 = [w0, w1, w2]
-exchange_S1 = [...]
-exchange_S2 = [...]
+exchange_S1 = [v0, w1, w2]
+exchange_S2 = [v0, v1, w2]
 exchange_S3 = [v0, v1, v2]
-
 
 
 ## 2: (Problem 6.7.3) Another Iterative Exchange Lemma
@@ -40,65 +68,53 @@ v1 = list2vec([one,0,0])
 v2 = list2vec([one,one,0])
 
 exchange_2_S0 = [w0, w1, w2]
-exchange_2_S1 = [...]
-exchange_2_S2 = [...]
+exchange_2_S1 = [v0, w1, w2]
+exchange_2_S2 = [v0, v1, w2]
 exchange_2_S3 = [v0, v1, v2]
-
 
 
 ## 3: (Problem 6.7.4) Morph Lemma Coding
 def morph(S, B):
     '''
     Input:
-        - S: a list of distinct Vecs
-        - B: a list of linearly independent Vecs all in Span S
-    Output: a list of pairs of vectors to inject and eject (see problem description)
+        - S: a list of distinct Vec instances
+        - B: a list of linearly independent Vec instances
+        - Span S == Span B
+    Output: a list of pairs of vectors to inject and eject
     Example:
-        >>> # This is how our morph works.  Yours may yield different results.
-        >>> # Note: Make a copy of S to modify instead of modifying S itself.
-        >>> from vecutil import list2vec
-        >>> from vec import Vec
+        >>> #This is how our morph works.  Yours may yield different results.
         >>> S = [list2vec(v) for v in [[1,0,0],[0,1,0],[0,0,1]]]
         >>> B = [list2vec(v) for v in [[1,1,0],[0,1,1],[1,0,1]]]
-        >>> D = {0, 1, 2}
-        >>> morph(S, B) == [(Vec(D,{0: 1, 1: 1, 2: 0}), Vec(D,{0: 1, 1: 0, 2: 0})), (Vec(D,{0: 0, 1: 1, 2: 1}), Vec(D,{0: 0, 1: 1, 2: 0})), (Vec(D,{0: 1, 1: 0, 2: 1}), Vec(D,{0: 0, 1: 0, 2: 1}))]
-        True
-        >>> S == [list2vec(v) for v in [[1,0,0],[0,1,0],[0,0,1]]]
-        True
-        >>> B == [list2vec(v) for v in [[1,1,0],[0,1,1],[1,0,1]]]
-        True
-        >>> from GF2 import one
-        >>> D = {0, 1, 2, 3, 4, 5, 6, 7}
-        >>> S = [Vec(D,{1: one, 2: one, 3: one, 4: one}), Vec(D,{1: one, 3: one}), Vec(D,{0: one, 1: one, 3: one, 5: one, 6: one}), Vec(D,{3: one, 4: one}), Vec(D,{3: one, 5: one, 6: one})]
-        >>> B = [Vec(D,{2: one, 4: one}), Vec(D,{0: one, 1: one, 2: one, 3: one, 4: one, 5: one, 6: one}), Vec(D,{0: one, 1: one, 2: one, 5: one, 6: one})]
-        >>> sol = morph(S, B)
-        >>> sol == [(B[0],S[0]), (B[1],S[2]), (B[2],S[3])] or sol == [(B[0],S[1]), (B[1],S[2]), (B[2],S[3])]
-        True
-        >>> # Should work the same regardless of order of S
-        >>> from random import random
-        >>> sol = morph(sorted(S, key=lambda x:random()), B)
-        >>> sol == [(B[0],S[0]), (B[1],S[2]), (B[2],S[3])] or sol == [(B[0],S[1]), (B[1],S[2]), (B[2],S[3])]
-        True
-    '''
-    pass
+        >>> morph(S, B)
+        [(Vec({0, 1, 2},{0: 1, 1: 1, 2: 0}), Vec({0, 1, 2},{0: 1, 1: 0, 2: 0})), (Vec({0, 1, 2},{0: 0, 1: 1, 2: 1}), Vec({0, 1, 2},{0: 0, 1: 1, 2: 0})), (Vec({0, 1, 2},{0: 1, 1: 0, 2: 1}), Vec({0, 1, 2},{0: 0, 1: 0, 2: 1}))]
 
+    '''
+    A = []
+    copyS = list(S)
+    result = []
+    for z in B:
+        w = exchange(copyS,A,z)
+        result.append((z,w))
+        copyS.remove(w)
+        copyS.append(z)
+        A.append(w)
+    return result
 
 
 ## 4: (Problem 6.7.5) Row and Column Rank Practice
 # Please express each solution as a list of Vecs
 
-row_space_1 = [...]
-col_space_1 = [...]
+row_space_1 = [list2vec([1,2,0]),list2vec([0,2,1])]
+col_space_1 = [list2vec([1,0]),list2vec([0,1])]
 
-row_space_2 = [...]
-col_space_2 = [...]
+row_space_2 = [list2vec([1,4,0,0]),list2vec([0,2,2,0]),list2vec([0,0,1,1])]
+col_space_2 = [list2vec([1,0,0]),list2vec([0,2,1]),list2vec([0,0,1])]
 
-row_space_3 = [...]
-col_space_3 = [...]
+row_space_3 = [list2vec([1])]
+col_space_3 = [list2vec([1,2,3])]
 
-row_space_4 = [...]
-col_space_4 = [...]
-
+row_space_4 = [list2vec([1,0]), list2vec([0,1])]
+col_space_4 = [list2vec([1,2,3]), list2vec([0,1,4])]
 
 
 ## 5: () Subset Basis
@@ -140,10 +156,14 @@ def subset_basis(T):
         >>> D = {'a','b','c','d'}
         >>> c0, c1, c2, c3, c4 = Vec(D,{'d': one, 'c': one}), Vec(D,{'d': one, 'a': one, 'c': one, 'b': one}), Vec(D,{'a': one}), Vec(D,{}), Vec(D,{'d': one, 'a': one, 'b': one})
         >>> subset_basis({c0,c1,c2,c3,c4}) == {c0,c1,c2,c4}
-True
+        True
     '''
-    pass
-
+    result = []
+    for w in T:
+        result.append(w)
+        if not is_independent(result):
+            result.pop()
+    return set(result)
 
 
 ## 6: () Superset Basis Lemma in Python
@@ -171,8 +191,12 @@ def superset_basis(C, T):
         >>> all(x in [a0,a1,a2,a3] for x in sb)
         True
     '''
-    pass
-
+    L = list(C)
+    for element in T:
+        L.append(element)
+        if not is_independent(L):
+            L.pop() 
+    return set(L)
 
 
 ## 7: (Problem 6.7.6) My Is Independent Procedure
@@ -202,8 +226,7 @@ def my_is_independent(L):
         >>> L == [Vec(D,{0: 1}), Vec(D,{1: 1}), Vec(D,{2: 1}), Vec(D,{0: 1, 1: 1, 2: 1}), Vec(D,{0: 1, 1: 1}), Vec(D,{1: 1, 2: 1})]
         True
     '''
-    pass
-
+    return True if rank(L) == len(L) else False
 
 
 ## 8: (Problem 6.7.7) My Rank
@@ -222,8 +245,7 @@ def my_rank(L):
         >>> my_rank([list2vec(v) for v in [[1,1,1],[2,2,2],[3,3,3],[4,4,4],[123,432,123]]])
         2
     '''
-    pass
-
+    return len(subset_basis(L))
 
 
 ## 9: (Problem 6.7.11) Direct Sum Unique Representation
@@ -265,7 +287,15 @@ def direct_sum_decompose(U_basis, V_basis, w):
         >>> w == Vec(D,{0: 2, 1: 5, 2: 0, 3: 0, 4: 1, 5: 0})
         True
     '''
-    pass
+    UV = coldict2mat(U_basis + V_basis)
+    W = solve(UV, w)
+    U = coldict2mat(U_basis)
+    V = coldict2mat(V_basis)
+    Wu = Vec(set(range(len(U_basis))),{x: W[x] for x in range(len(U_basis))})
+    Wv = Vec(set(range(len(V_basis))),{x: W[len(U_basis) + x] for x in range(len(V_basis))})
+    u = U * Wu
+    v = V * Wv
+    return (u,v) 
 
 
 
@@ -283,7 +313,9 @@ def is_invertible(M):
     >>> is_invertible(M1)
     False
     '''
-    pass
+    col = list(mat2coldict(M).values())
+    row = list(mat2rowdict(M).values())
+    return rank(col) == len(col) and rank(row) == len(row)
 
 
 
@@ -302,7 +334,8 @@ def find_matrix_inverse(A):
         >>> find_matrix_inverse(M2) == Mat(M2.D, {(0, 1): one, (1, 0): one, (2, 2): one})
         True
     '''
-    pass
+    R = mat2rowdict(identity(A.D[0], one))
+    return coldict2mat([solve(A, R[i]) for i in range(len(R))])
 
 
 
@@ -321,5 +354,6 @@ def find_triangular_matrix_inverse(A):
         >>> find_triangular_matrix_inverse(A) == Mat(({0, 1, 2, 3}, {0, 1, 2, 3}), {(0, 1): -0.5, (1, 2): -0.3, (3, 2): 0.0, (0, 0): 1.0, (3, 3): 1.0, (3, 0): 0.0, (3, 1): 0.0, (2, 1): 0.0, (0, 2): -0.05000000000000002, (2, 0): 0.0, (1, 3): -0.87, (2, 3): -0.1, (2, 2): 1.0, (1, 0): 0.0, (0, 3): -3.545, (1, 1): 1.0})
         True
     '''
-    pass
+    R = mat2rowdict(identity(A.D[0], 1))
+    return coldict2mat([solve(A, R[i]) for i in range(len(R))])
 
